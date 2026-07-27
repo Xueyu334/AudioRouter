@@ -5,6 +5,8 @@ internal static class AudioThreadPriority
     [ThreadStatic]
     private static bool _isPromoted;
 
+    public static bool IsCurrentThreadPromoted => _isPromoted;
+
     public static void PromoteCurrentThread()
     {
         if (_isPromoted)
