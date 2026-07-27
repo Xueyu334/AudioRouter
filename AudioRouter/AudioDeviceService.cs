@@ -1,4 +1,5 @@
 using NAudio.CoreAudioApi;
+using Serilog;
 
 namespace AudioRouter;
 
@@ -22,9 +23,13 @@ public sealed class AudioDeviceService
             }
         }
 
-        return result
+        var sortedDevices = result
             .OrderBy(device => device.Name)
             .ToList();
+        Log.Debug(
+            "检测到 {DeviceCount} 个活动播放设备",
+            sortedDevices.Count);
+        return sortedDevices;
     }
 
     public string? GetDefaultRenderDeviceId()
@@ -37,8 +42,11 @@ public sealed class AudioDeviceService
                 Role.Multimedia);
             return device.ID;
         }
-        catch
+        catch (Exception exception)
         {
+            Log.Debug(
+                exception,
+                "无法获取系统默认播放设备");
             return null;
         }
     }

@@ -2,6 +2,7 @@ using System.Runtime;
 using NAudio.CoreAudioApi;
 using NAudio.CoreAudioApi.Interfaces;
 using NAudio.Wave;
+using Serilog;
 
 namespace AudioRouter;
 
@@ -141,6 +142,12 @@ public sealed class AudioForwarder : IDisposable
             var sessionId = Interlocked.Increment(
                 ref _nextSessionId);
             Volatile.Write(ref _activeSessionId, sessionId);
+            Log.Information(
+                "音频会话 {SessionId} 开始初始化：{SourceDeviceId} -> {OutputDeviceId}，目标延迟 {LatencyMilliseconds} ms",
+                sessionId,
+                sourceDeviceId,
+                outputDeviceId,
+                latencyMilliseconds);
             Volatile.Write(
                 ref _state,
                 (int)ForwarderState.Starting);
@@ -178,9 +185,22 @@ public sealed class AudioForwarder : IDisposable
                 }
 
                 StartOutputHealthMonitor(sessionId);
+                Log.Information(
+                    "音频会话 {SessionId} 已运行：管线 {PipelineMode}，采集缓冲 {CaptureBufferMilliseconds} ms，输出延迟 {OutputLatencyMilliseconds} ms",
+                    sessionId,
+                    (AudioPipelineMode)Volatile.Read(
+                        ref _pipelineMode),
+                    Volatile.Read(
+                        ref _activeCaptureBufferMilliseconds),
+                    Volatile.Read(
+                        ref _activeOutputLatencyMilliseconds));
             }
-            catch
+            catch (Exception exception)
             {
+                Log.Error(
+                    exception,
+                    "音频会话 {SessionId} 初始化失败",
+                    sessionId);
                 Volatile.Write(ref _activeSessionId, 0);
                 Interlocked.Exchange(ref _failureSignaled, 1);
                 Volatile.Write(
@@ -206,6 +226,11 @@ public sealed class AudioForwarder : IDisposable
                 return;
             }
 
+            var sessionId = Volatile.Read(
+                ref _activeSessionId);
+            Log.Information(
+                "正在停止音频会话 {SessionId}",
+                sessionId);
             Volatile.Write(ref _activeSessionId, 0);
             Volatile.Write(
                 ref _state,
@@ -219,6 +244,9 @@ public sealed class AudioForwarder : IDisposable
                 Volatile.Write(
                     ref _state,
                     (int)ForwarderState.Stopped);
+                Log.Information(
+                    "音频会话 {SessionId} 已停止",
+                    sessionId);
             }
         }
     }
@@ -418,6 +446,9 @@ public sealed class AudioForwarder : IDisposable
         }
         catch (Exception directException)
         {
+            Log.Warning(
+                directException,
+                "Direct WASAPI 输出初始化失败，尝试 Media Foundation 兼容管线");
             try
             {
                 InitializeMediaFoundationFallback();
@@ -425,6 +456,9 @@ public sealed class AudioForwarder : IDisposable
             }
             catch (Exception fallbackException)
             {
+                Log.Error(
+                    fallbackException,
+                    "Media Foundation 兼容输出初始化也失败");
                 throw new InvalidOperationException(
                     "Direct WASAPI 与 Media Foundation " +
                     "兼容输出均初始化失败。",
@@ -481,6 +515,12 @@ public sealed class AudioForwarder : IDisposable
             catch (Exception exception)
             {
                 lastException = exception;
+                Log.Debug(
+                    exception,
+                    "WASAPI 输出配置初始化失败：共享模式 {ShareMode}，延迟 {LatencyMilliseconds} ms",
+                    _outputConfigurations[index].ShareMode,
+                    _outputConfigurations[index]
+                        .LatencyMilliseconds);
             }
         }
 
@@ -561,6 +601,9 @@ public sealed class AudioForwarder : IDisposable
         catch (Exception exception)
         {
             failures.Add(exception);
+            Log.Warning(
+                exception,
+                "当前 WASAPI 输出配置启动失败，尝试下一个配置");
             ReleaseCurrentOutput();
         }
 
@@ -580,6 +623,11 @@ public sealed class AudioForwarder : IDisposable
                 Volatile.Write(ref _output, candidate);
                 SetActiveOutputConfiguration(index);
                 candidate.Play();
+                Log.Information(
+                    "WASAPI 输出已回退到：共享模式 {ShareMode}，延迟 {LatencyMilliseconds} ms",
+                    _outputConfigurations[index].ShareMode,
+                    _outputConfigurations[index]
+                        .LatencyMilliseconds);
                 return;
             }
             catch (Exception exception)
@@ -604,6 +652,8 @@ public sealed class AudioForwarder : IDisposable
         {
             try
             {
+                Log.Warning(
+                    "Direct WASAPI 输出均不可用，回退到 Media Foundation 兼容管线");
                 InitializeMediaFoundationFallback();
                 InitializeOutput(_outputProvider!);
                 _output!.PlaybackStopped +=
@@ -641,8 +691,15 @@ public sealed class AudioForwarder : IDisposable
 
             try
             {
+                Log.Warning(
+                    lowLatencyException,
+                    "低延迟 Loopback 捕获启动失败，回退到兼容捕获模式");
                 ReplaceCaptureWithCompatibilityMode();
                 _capture!.StartRecording();
+                Log.Information(
+                    "兼容 Loopback 捕获已启动，缓冲 {CaptureBufferMilliseconds} ms",
+                    Volatile.Read(
+                        ref _activeCaptureBufferMilliseconds));
             }
             catch (Exception compatibilityException)
             {
@@ -831,6 +888,9 @@ public sealed class AudioForwarder : IDisposable
                         (int)ForwarderState.Starting) ==
                     ForwarderState.Starting)
                 {
+                    Log.Error(
+                        failure,
+                        "音频会话在启动期间意外停止");
                     return;
                 }
 
@@ -854,6 +914,10 @@ public sealed class AudioForwarder : IDisposable
                 return;
             }
 
+            Log.Error(
+                failure,
+                "音频会话 {SessionId} 意外停止，准备释放资源",
+                sessionId);
             ThreadPool.QueueUserWorkItem(_ =>
                 StopFailedSession(sessionId, failure));
             return;
@@ -998,6 +1062,9 @@ public sealed class AudioForwarder : IDisposable
     {
         if (IsDeviceAvailabilityFailure(failure))
         {
+            Log.Warning(
+                failure,
+                "检测到音频设备不可用，下次启动将从低延迟模式重新尝试");
             Interlocked.Exchange(
                 ref _deviceAvailabilityFailureObserved,
                 1);
@@ -1033,12 +1100,19 @@ public sealed class AudioForwarder : IDisposable
             Interlocked.Exchange(
                 ref _nextOutputFallbackStage,
                 (int)nextStage);
+            Log.Debug(
+                "下一次音频启动使用回退阶段：{FallbackStage}",
+                nextStage);
             return;
         }
 
         SetMaximum(
             ref _nextOutputFallbackStage,
             (int)nextStage);
+        Log.Warning(
+            failure,
+            "下一次音频启动将使用回退阶段：{FallbackStage}",
+            nextStage);
     }
 
     private static bool IsDeviceAvailabilityFailure(

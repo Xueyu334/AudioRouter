@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Serilog;
 
 namespace AudioRouter;
 
@@ -136,8 +137,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 : Math.Round(
                     _audioDeviceService.GetMasterVolume(value.Id) * 100);
         }
-        catch
+        catch (Exception exception)
         {
+            Log.Warning(
+                exception,
+                "读取输出设备音量失败：{OutputDeviceId}",
+                value?.Id);
             OutputVolume = 0;
         }
         finally
@@ -159,8 +164,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedOutputDevice.Id,
                 (float)(value / 100));
         }
-        catch
+        catch (Exception exception)
         {
+            Log.Warning(
+                exception,
+                "设置输出设备音量失败：{OutputDeviceId}，目标音量 {Volume}",
+                SelectedOutputDevice.Id,
+                value);
             // 音量调整失败时保留界面响应；设备状态会在下次刷新时重新同步。
         }
     }
@@ -189,6 +199,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 FindDevice(outputDeviceId) ??
                 Devices.FirstOrDefault();
 
+            Log.Information(
+                "已刷新音频设备，共 {DeviceCount} 个；监听设备：{SourceDeviceName}；输出设备：{OutputDeviceName}",
+                Devices.Count,
+                SelectedListeningDevice?.Name,
+                SelectedOutputDevice?.Name);
+
             if (Devices.Count == 0)
             {
                 ShowMessage("未检测到可用的播放设备。", MessageBoxImage.Information);
@@ -196,6 +212,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         }
         catch (Exception exception)
         {
+            Log.Error(exception, "刷新音频设备失败");
             ShowMessage($"刷新音频设备失败：{exception.Message}", MessageBoxImage.Error);
         }
     }
@@ -222,6 +239,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         try
         {
+            Log.Information(
+                "请求启动音频转发：{SourceDeviceName} ({SourceDeviceId}) -> {OutputDeviceName} ({OutputDeviceId})，目标延迟 {LatencyMilliseconds} ms",
+                SelectedListeningDevice.Name,
+                SelectedListeningDevice.Id,
+                SelectedOutputDevice.Name,
+                SelectedOutputDevice.Id,
+                SelectedLatency);
             _audioForwarder.Start(
                 SelectedListeningDevice.Id,
                 SelectedOutputDevice.Id,
@@ -243,10 +267,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedLatency));
             IsForwarding = true;
             StartDiagnostics();
+            Log.Information("音频转发已启动");
         }
         catch (Exception exception)
         {
             IsForwarding = false;
+            Log.Error(exception, "启动音频转发失败");
             ShowMessage($"无法启动音频转发：{exception.Message}", MessageBoxImage.Error);
         }
     }
@@ -262,11 +288,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanStop))]
     private void Stop()
     {
+        Log.Information(
+            "用户请求停止音频转发；转发中：{IsForwarding}，恢复中：{IsRecovering}",
+            IsForwarding,
+            IsRecovering);
         CancelRecovery();
         _diagnosticsTimer.Stop();
         _audioForwarder.Stop();
         IsForwarding = false;
         ResetDiagnosticsDisplay();
+        Log.Information("音频转发已停止");
     }
 
     private bool CanStop()
@@ -385,6 +416,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void AudioForwarder_ForwardingFailed(object? sender, Exception exception)
     {
+        Log.Error(exception, "音频转发意外停止");
         if (Volatile.Read(ref _disposed) != 0)
         {
             return;
@@ -416,6 +448,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         IsRecovering = true;
         _recoveryTimer.Start();
+        Log.Warning(
+            "开始等待音频设备恢复：{SourceDeviceId} -> {OutputDeviceId}",
+            _recoverySourceDeviceId,
+            _recoveryOutputDeviceId);
     }
 
     private void RecoveryTimer_Tick(object? sender, EventArgs e)
@@ -454,9 +490,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             IsRecovering = false;
             IsForwarding = true;
             StartDiagnostics();
+            Log.Information(
+                "音频设备已恢复，转发重新启动：{SourceDeviceId} -> {OutputDeviceId}",
+                _recoverySourceDeviceId,
+                _recoveryOutputDeviceId);
         }
-        catch
+        catch (Exception exception)
         {
+            Log.Debug(
+                exception,
+                "设备恢复重试未成功，下个周期继续");
             // 设备可能刚重新出现但尚未完成初始化，下个周期继续重试。
         }
     }
