@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
 
 namespace AudioRouter;
 
@@ -27,7 +28,7 @@ public partial class App
         const LogEventLevel minimumLevel = LogEventLevel.Information;
 #endif
 
-        Log.Logger = new LoggerConfiguration()
+        var loggerConfiguration = new LoggerConfiguration()
             .MinimumLevel.Is(minimumLevel)
             .MinimumLevel.Override(
                 "Microsoft",
@@ -50,8 +51,17 @@ public partial class App
                 outputTemplate:
                 "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} " +
                 "[{Level:u3}] {Message:lj} {Properties:j}" +
-                "{NewLine}{Exception}")
-            .CreateLogger();
+                "{NewLine}{Exception}");
+
+#if DEBUG
+        loggerConfiguration.WriteTo.Console(
+            theme: ConsoleTheme.None,
+            outputTemplate:
+            "{Timestamp:HH:mm:ss.fff} [{Level:u3}] " +
+            "{Message:lj}{NewLine}{Exception}");
+#endif
+
+        Log.Logger = loggerConfiguration.CreateLogger();
 
         DispatcherUnhandledException +=
             OnDispatcherUnhandledException;
