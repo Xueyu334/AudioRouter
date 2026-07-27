@@ -5,7 +5,7 @@ namespace AudioRouter;
 
 public sealed class AudioForwarder : IDisposable
 {
-    private const int OutputLatencyMilliseconds = 30;
+    private const int OutputLatencyMilliseconds = 40;
     private readonly object _syncRoot = new();
     private MMDevice? _sourceDevice;
     private MMDevice? _outputDevice;
@@ -54,6 +54,7 @@ public sealed class AudioForwarder : IDisposable
                     prebufferDuration);
                 _adaptiveResampler = new AdaptiveResamplingSampleProvider(
                     _prebuffer.ToSampleProvider(),
+                    _outputDevice.AudioClient.MixFormat.SampleRate,
                     () => _buffer?.BufferedDuration ?? TimeSpan.Zero,
                     prebufferDuration);
 
@@ -67,7 +68,7 @@ public sealed class AudioForwarder : IDisposable
                 _output = new WasapiOut(
                     _outputDevice,
                     AudioClientShareMode.Shared,
-                    false,
+                    true,
                     OutputLatencyMilliseconds);
 
                 _capture.DataAvailable += Capture_DataAvailable;
@@ -118,10 +119,11 @@ public sealed class AudioForwarder : IDisposable
 
     private void Capture_DataAvailable(object? sender, WaveInEventArgs e)
     {
+        AudioThreadPriority.PromoteCurrentThread();
+
         if (e.BytesRecorded > 0)
         {
             _buffer?.AddSamples(e.Buffer, 0, e.BytesRecorded);
-            _prebuffer?.TrimExcessBuffer();
         }
     }
 
