@@ -7,9 +7,9 @@
         mc:Ignorable="d"
         Title="音频转发器"
         Icon="/Assets/voice.ico"
-        Width="780"
+        Width="900"
         Height="710"
-        MinWidth="720"
+        MinWidth="820"
         MinHeight="680"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing"
@@ -305,7 +305,22 @@
                                FontWeight="SemiBold"
                                Foreground="#475569"
                                Text="实时性能"/>
-                    <UniformGrid Columns="5">
+                    <UniformGrid Columns="6">
+                        <Border Margin="0,0,6,0"
+                                Padding="9,8"
+                                Background="#F8FAFC"
+                                CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock FontSize="11"
+                                           Foreground="#94A3B8"
+                                           Text="目标延迟"/>
+                                <TextBlock Margin="0,4,0,0"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#0F172A"
+                                           Text="{Binding TargetLatencyText}"/>
+                            </StackPanel>
+                        </Border>
                         <Border Margin="0,0,6,0"
                                 Padding="9,8"
                                 Background="#F8FAFC"

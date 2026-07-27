@@ -29,6 +29,7 @@ public sealed class AudioForwarder : IDisposable
     private BufferedWaveProvider? _buffer;
     private PrebufferingWaveProvider? _prebuffer;
     private AdaptiveResamplingSampleProvider? _adaptiveResampler;
+    private IWaveProvider? _outputProvider;
     private MediaFoundationResampler? _resampler;
     private int _failureSignaled;
     private int _state = (int)ForwarderState.Stopped;
@@ -38,6 +39,7 @@ public sealed class AudioForwarder : IDisposable
     private int _activeOutputConfigurationIndex = -1;
     private GCLatencyMode? _previousGcLatencyMode;
     private bool _isExclusiveOutput;
+    private int _targetLatencyMilliseconds;
 
     public event EventHandler<Exception>? ForwardingFailed;
 
@@ -52,7 +54,8 @@ public sealed class AudioForwarder : IDisposable
             IsRunning,
             bufferedDuration,
             _activeOutputLatencyMilliseconds,
-            _isExclusiveOutput);
+            _isExclusiveOutput,
+            _targetLatencyMilliseconds);
     }
 
     public void Start(string sourceDeviceId, string outputDeviceId, int latencyMilliseconds)
@@ -88,11 +91,12 @@ public sealed class AudioForwarder : IDisposable
             {
                 _diagnostics.Reset();
                 Interlocked.Exchange(ref _failureSignaled, 0);
+                _targetLatencyMilliseconds = latencyMilliseconds;
                 EnableLowLatencyGc();
                 LoadDevices(sourceDeviceId, outputDeviceId);
                 InitializeCapture(latencyMilliseconds);
                 InitializeProcessingPipeline(latencyMilliseconds);
-                InitializeOutput();
+                InitializeOutputWithFormatFallback();
                 SubscribeEvents();
                 StartComponents();
                 Volatile.Write(ref _state, (int)ForwarderState.Running);
@@ -172,7 +176,7 @@ public sealed class AudioForwarder : IDisposable
     private void InitializeProcessingPipeline(int latencyMilliseconds)
     {
         _outputConfigurations =
-            GetOutputConfigurations(latencyMilliseconds);
+            GetOutputConfigurations();
         var prebufferMilliseconds =
             GetPrebufferMilliseconds(latencyMilliseconds);
         var prebufferDuration = TimeSpan.FromMilliseconds(
@@ -185,18 +189,41 @@ public sealed class AudioForwarder : IDisposable
             _outputDevice!.AudioClient.MixFormat.SampleRate,
             () => _buffer?.BufferedDuration ?? TimeSpan.Zero,
             prebufferDuration);
+        _outputProvider = new ReadFullyWaveProvider(
+            _adaptiveResampler.ToWaveProvider());
+    }
 
-        // WDL 负责校正两张独立声卡的时钟漂移；Media Foundation
-        // 负责将声道、位深和封装格式转换为目标设备的混音格式。
+    private void InitializeOutputWithFormatFallback()
+    {
+        try
+        {
+            InitializeOutput(_outputProvider!);
+        }
+        catch
+        {
+            InitializeMediaFoundationFallback();
+            InitializeOutput(_outputProvider!);
+        }
+    }
+
+    private void InitializeMediaFoundationFallback()
+    {
         _resampler = new MediaFoundationResampler(
-            _adaptiveResampler.ToWaveProvider(),
-            _outputDevice.AudioClient.MixFormat)
+            _adaptiveResampler!.ToWaveProvider(),
+            _outputDevice!.AudioClient.MixFormat)
         {
             ResamplerQuality = 60
         };
+        _outputProvider = _resampler;
+        _outputConfigurations =
+        [
+            new OutputConfiguration(
+                AudioClientShareMode.Shared,
+                StableOutputLatencyMilliseconds)
+        ];
     }
 
-    private void InitializeOutput()
+    private void InitializeOutput(IWaveProvider provider)
     {
         Exception? lastException = null;
         for (var index = 0;
@@ -206,7 +233,7 @@ public sealed class AudioForwarder : IDisposable
             try
             {
                 _output = CreateOutput(
-                    _resampler!,
+                    provider,
                     _outputConfigurations[index]);
                 SetActiveOutputConfiguration(index);
                 return;
@@ -232,50 +259,28 @@ public sealed class AudioForwarder : IDisposable
     private void StartComponents()
     {
         _capture!.StartRecording();
-        PlayOutputWithFallback(_resampler!);
+        PlayOutputWithFallback(_outputProvider!);
     }
 
-    private static OutputConfiguration[] GetOutputConfigurations(
-        int latencyMilliseconds)
+    private static OutputConfiguration[] GetOutputConfigurations()
     {
-        return latencyMilliseconds switch
-        {
-            <= 20 =>
-            [
-                new OutputConfiguration(
-                    AudioClientShareMode.Exclusive,
-                    5),
-                new OutputConfiguration(
-                    AudioClientShareMode.Shared,
-                    10),
-                new OutputConfiguration(
-                    AudioClientShareMode.Shared,
-                    StableOutputLatencyMilliseconds)
-            ],
-            <= 50 =>
-            [
-                new OutputConfiguration(
-                    AudioClientShareMode.Shared,
-                    10),
-                new OutputConfiguration(
-                    AudioClientShareMode.Shared,
-                    StableOutputLatencyMilliseconds)
-            ],
-            _ =>
-            [
-                new OutputConfiguration(
-                    AudioClientShareMode.Shared,
-                    StableOutputLatencyMilliseconds)
-            ]
-        };
+        return
+        [
+            new OutputConfiguration(
+                AudioClientShareMode.Shared,
+                10),
+            new OutputConfiguration(
+                AudioClientShareMode.Shared,
+                StableOutputLatencyMilliseconds)
+        ];
     }
 
     private static int GetPrebufferMilliseconds(int latencyMilliseconds)
     {
         return latencyMilliseconds switch
         {
-            <= 20 => 5,
-            <= 50 => 10,
+            <= 20 => 15,
+            <= 50 => 40,
             _ => Math.Max(
                 latencyMilliseconds -
                 StableOutputLatencyMilliseconds,
@@ -398,6 +403,7 @@ public sealed class AudioForwarder : IDisposable
         _activeOutputConfigurationIndex = -1;
         _outputConfigurations = [];
         _isExclusiveOutput = false;
+        _targetLatencyMilliseconds = 0;
 
         var capture = _capture;
         _capture = null;
@@ -418,6 +424,7 @@ public sealed class AudioForwarder : IDisposable
 
         DisposeSafely(_resampler);
         _resampler = null;
+        _outputProvider = null;
         _adaptiveResampler = null;
         _prebuffer = null;
         _buffer = null;

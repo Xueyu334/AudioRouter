@@ -42,6 +42,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private string _estimatedLatencyText = "--";
 
     [ObservableProperty]
+    private string _targetLatencyText = "--";
+
+    [ObservableProperty]
     private string _bufferStatusText = "--";
 
     [ObservableProperty]
@@ -244,6 +247,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         EstimatedLatencyText =
             $"{diagnostics.EstimatedLatency.TotalMilliseconds:F0} ms · " +
             $"{(diagnostics.IsExclusiveOutput ? "独占" : "共享")}";
+        TargetLatencyText =
+            $"{diagnostics.TargetLatency.TotalMilliseconds:F0} ms";
         BufferStatusText =
             $"{diagnostics.BufferedDuration.TotalMilliseconds:F0} / " +
             $"{diagnostics.PeakBufferedDuration.TotalMilliseconds:F0} ms";
@@ -277,6 +282,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private void ResetDiagnosticsDisplay()
     {
         EstimatedLatencyText = "--";
+        TargetLatencyText = "--";
         BufferStatusText = "--";
         CaptureRateText = "--";
         CallbackRateText = "--";
