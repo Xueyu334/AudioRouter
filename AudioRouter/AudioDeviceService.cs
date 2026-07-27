@@ -43,6 +43,21 @@ public sealed class AudioDeviceService
         }
     }
 
+    public float GetMasterVolume(string deviceId)
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        using var device = enumerator.GetDevice(deviceId);
+        return device.AudioEndpointVolume.MasterVolumeLevelScalar;
+    }
+
+    public void SetMasterVolume(string deviceId, float volume)
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        using var device = enumerator.GetDevice(deviceId);
+        device.AudioEndpointVolume.MasterVolumeLevelScalar =
+            Math.Clamp(volume, 0.0f, 1.0f);
+    }
+
     public bool AreActive(string firstDeviceId, string secondDeviceId)
     {
         var activeDeviceIds = GetActiveRenderDevices()

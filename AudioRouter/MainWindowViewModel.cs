@@ -14,6 +14,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly AudioConfigService _audioConfigService = new();
     private readonly DispatcherTimer _diagnosticsTimer;
     private readonly DispatcherTimer _recoveryTimer;
+    private bool _isLoadingOutputVolume;
     private long _forwardingStartedTimestamp;
     private long _lastDiagnosticsTimestamp;
     private long _lastCaptureCallbackCount;
@@ -36,6 +37,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     private AudioDeviceInfo? _selectedOutputDevice;
+
+    [ObservableProperty]
+    private double _outputVolume;
 
     [ObservableProperty]
     private int _selectedLatency = 50;
@@ -121,6 +125,45 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         : IsForwarding
             ? "正在转发"
             : "已停止";
+
+    partial void OnSelectedOutputDeviceChanged(AudioDeviceInfo? value)
+    {
+        _isLoadingOutputVolume = true;
+        try
+        {
+            OutputVolume = value == null
+                ? 0
+                : Math.Round(
+                    _audioDeviceService.GetMasterVolume(value.Id) * 100);
+        }
+        catch
+        {
+            OutputVolume = 0;
+        }
+        finally
+        {
+            _isLoadingOutputVolume = false;
+        }
+    }
+
+    partial void OnOutputVolumeChanged(double value)
+    {
+        if (_isLoadingOutputVolume || SelectedOutputDevice == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _audioDeviceService.SetMasterVolume(
+                SelectedOutputDevice.Id,
+                (float)(value / 100));
+        }
+        catch
+        {
+            // 音量调整失败时保留界面响应；设备状态会在下次刷新时重新同步。
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanRefreshDevices))]
     private void RefreshDevices()

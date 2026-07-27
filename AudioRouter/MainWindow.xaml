@@ -151,6 +151,100 @@
             <Setter Property="CornerRadius" Value="10" />
         </Style>
 
+        <Style x:Key="OutputVolumeSliderStyle" TargetType="Slider">
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="IsEnabled" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Background="Transparent">
+                            <Border Height="6"
+                                    Margin="7,0"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource AppBorderBrush}"
+                                    CornerRadius="3" />
+                            <Track x:Name="PART_Track"
+                                   Height="16"
+                                   Margin="7,0"
+                                   VerticalAlignment="Center"
+                                   IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Value="{TemplateBinding Value}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}"
+                                                  Focusable="False"
+                                                  IsTabStop="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="6"
+                                                        VerticalAlignment="Center"
+                                                        Background="{DynamicResource AppBrandBrush}"
+                                                        CornerRadius="3" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="16"
+                                           Height="16"
+                                           Background="{DynamicResource AppBrandBrush}"
+                                           BorderBrush="White"
+                                           BorderThickness="3">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                 <Ellipse x:Name="ThumbSurface"
+                                                          Fill="{TemplateBinding Background}"
+                                                          Stroke="{TemplateBinding BorderBrush}"
+                                                          StrokeThickness="{TemplateBinding BorderThickness}" />
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="ThumbSurface"
+                                                                Property="Fill"
+                                                                Value="{DynamicResource AppBrandHoverBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="ThumbSurface"
+                                                                Property="Fill"
+                                                                Value="{DynamicResource AppBrandHoverBrush}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}"
+                                                  Background="Transparent"
+                                                  Focusable="False"
+                                                  IsTabStop="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedOutputDevice}"
+                             Value="{x:Null}">
+                    <Setter Property="IsEnabled" Value="False" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="ProcessingCardStyle" TargetType="Border">
             <Setter Property="Padding" Value="16" />
             <Setter Property="Background" Value="{DynamicResource AppBrandTintBrush}" />
@@ -693,6 +787,31 @@
                                                  MaxDropDownHeight="280"
                                                  SelectedItem="{Binding SelectedOutputDevice}"
                                                  ToolTip="{Binding SelectedOutputDevice.Name}" />
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid>
+                                            <TextBlock Style="{StaticResource CaptionStyle}"
+                                                       Text="设备音量" />
+                                            <TextBlock HorizontalAlignment="Right"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AppBrandBrush}"
+                                                       Text="{Binding OutputVolume, StringFormat={}{0:F0}%}" />
+                                        </Grid>
+                                        <Slider Grid.Row="1"
+                                                Margin="0,5,0,0"
+                                                IsMoveToPointEnabled="True"
+                                                IsSnapToTickEnabled="True"
+                                                Maximum="100"
+                                                Minimum="0"
+                                                SmallChange="1"
+                                                Style="{StaticResource OutputVolumeSliderStyle}"
+                                                TickFrequency="1"
+                                                Value="{Binding OutputVolume, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
                                     <StackPanel Margin="0,10,0,0"
                                                 Orientation="Horizontal">
                                         <Ellipse Width="7"
