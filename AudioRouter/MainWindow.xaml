@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="音频转发器"
+        Icon="/Assets/voice.ico"
         Width="780"
         Height="710"
         MinWidth="720"

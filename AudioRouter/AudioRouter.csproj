@@ -5,10 +5,16 @@
         <UseWPF>true</UseWPF>
         <RootNamespace>AudioRouter</RootNamespace>
         <AssemblyName>AudioRouter</AssemblyName>
+        <ApplicationIcon>Assets\voice.ico</ApplicationIcon>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Remove="Assets\voice.ico" />
+        <Resource Include="Assets\voice.ico" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
