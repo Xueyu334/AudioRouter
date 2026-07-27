@@ -16,10 +16,28 @@ public sealed class AudioForwarder : IDisposable
     private AdaptiveResamplingSampleProvider? _adaptiveResampler;
     private MediaFoundationResampler? _resampler;
     private bool _isStopping;
+    private long _captureCallbackCount;
+    private long _capturedBytes;
+    private long _peakBufferedDurationTicks;
 
     public event EventHandler<Exception>? ForwardingFailed;
 
     public bool IsRunning { get; private set; }
+
+    public AudioForwarderDiagnostics GetDiagnostics()
+    {
+        var bufferedDuration = _buffer?.BufferedDuration ?? TimeSpan.Zero;
+        UpdatePeakBufferedDuration(bufferedDuration.Ticks);
+        return new AudioForwarderDiagnostics(
+            IsRunning,
+            Interlocked.Read(ref _captureCallbackCount),
+            Interlocked.Read(ref _capturedBytes),
+            bufferedDuration,
+            TimeSpan.FromTicks(
+                Interlocked.Read(ref _peakBufferedDurationTicks)),
+            bufferedDuration +
+            TimeSpan.FromMilliseconds(OutputLatencyMilliseconds));
+    }
 
     public void Start(string sourceDeviceId, string outputDeviceId, int latencyMilliseconds)
     {
@@ -32,6 +50,7 @@ public sealed class AudioForwarder : IDisposable
 
             try
             {
+                ResetDiagnostics();
                 using var enumerator = new MMDeviceEnumerator();
                 _sourceDevice = enumerator.GetDevice(sourceDeviceId);
                 _outputDevice = enumerator.GetDevice(outputDeviceId);
@@ -120,10 +139,38 @@ public sealed class AudioForwarder : IDisposable
     private void Capture_DataAvailable(object? sender, WaveInEventArgs e)
     {
         AudioThreadPriority.PromoteCurrentThread();
+        Interlocked.Increment(ref _captureCallbackCount);
 
         if (e.BytesRecorded > 0)
         {
             _buffer?.AddSamples(e.Buffer, 0, e.BytesRecorded);
+            Interlocked.Add(ref _capturedBytes, e.BytesRecorded);
+        }
+    }
+
+    private void ResetDiagnostics()
+    {
+        Interlocked.Exchange(ref _captureCallbackCount, 0);
+        Interlocked.Exchange(ref _capturedBytes, 0);
+        Interlocked.Exchange(ref _peakBufferedDurationTicks, 0);
+    }
+
+    private void UpdatePeakBufferedDuration(long bufferedDurationTicks)
+    {
+        var currentPeak = Interlocked.Read(ref _peakBufferedDurationTicks);
+
+        while (bufferedDurationTicks > currentPeak)
+        {
+            var observedPeak = Interlocked.CompareExchange(
+                ref _peakBufferedDurationTicks,
+                bufferedDurationTicks,
+                currentPeak);
+            if (observedPeak == currentPeak)
+            {
+                return;
+            }
+
+            currentPeak = observedPeak;
         }
     }
 

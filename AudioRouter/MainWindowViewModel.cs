@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NAudio.CoreAudioApi;
@@ -9,6 +11,11 @@ namespace AudioRouter;
 public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly AudioForwarder _audioForwarder = new();
+    private readonly DispatcherTimer _diagnosticsTimer;
+    private long _forwardingStartedTimestamp;
+    private long _lastDiagnosticsTimestamp;
+    private long _lastCaptureCallbackCount;
+    private long _lastCapturedBytes;
 
     [ObservableProperty]
     private ObservableCollection<AudioDeviceInfo> _devices = [];
@@ -22,7 +29,22 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AudioDeviceInfo? _selectedOutputDevice;
 
     [ObservableProperty]
-    private int _selectedLatency = 100;
+    private int _selectedLatency = 50;
+
+    [ObservableProperty]
+    private string _estimatedLatencyText = "--";
+
+    [ObservableProperty]
+    private string _bufferStatusText = "--";
+
+    [ObservableProperty]
+    private string _captureRateText = "--";
+
+    [ObservableProperty]
+    private string _callbackRateText = "--";
+
+    [ObservableProperty]
+    private string _forwardingDurationText = "00:00:00";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfigurationEnabled))]
@@ -35,10 +57,16 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public MainWindowViewModel()
     {
         _audioForwarder.ForwardingFailed += AudioForwarder_ForwardingFailed;
+        _diagnosticsTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(500),
+            DispatcherPriority.Background,
+            DiagnosticsTimer_Tick,
+            Application.Current.Dispatcher);
+        _diagnosticsTimer.Stop();
         RefreshDevices();
     }
 
-    public IReadOnlyList<int> LatencyOptions { get; } = [50, 100, 150, 200];
+    public IReadOnlyList<int> LatencyOptions { get; } = [20, 50, 100, 150, 200];
 
     public bool IsConfigurationEnabled => !IsForwarding;
 
@@ -119,6 +147,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedOutputDevice.Id,
                 SelectedLatency);
             IsForwarding = true;
+            StartDiagnostics();
         }
         catch (Exception exception)
         {
@@ -137,8 +166,10 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanStop))]
     private void Stop()
     {
+        _diagnosticsTimer.Stop();
         _audioForwarder.Stop();
         IsForwarding = false;
+        ResetDiagnosticsDisplay();
     }
 
     private bool CanStop()
@@ -148,8 +179,74 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _diagnosticsTimer.Stop();
+        _diagnosticsTimer.Tick -= DiagnosticsTimer_Tick;
         _audioForwarder.ForwardingFailed -= AudioForwarder_ForwardingFailed;
         _audioForwarder.Dispose();
+    }
+
+    private void StartDiagnostics()
+    {
+        var now = Stopwatch.GetTimestamp();
+        _forwardingStartedTimestamp = now;
+        _lastDiagnosticsTimestamp = now;
+        _lastCaptureCallbackCount = 0;
+        _lastCapturedBytes = 0;
+        UpdateDiagnostics(now);
+        _diagnosticsTimer.Start();
+    }
+
+    private void DiagnosticsTimer_Tick(object? sender, EventArgs e)
+    {
+        UpdateDiagnostics(Stopwatch.GetTimestamp());
+    }
+
+    private void UpdateDiagnostics(long now)
+    {
+        var diagnostics = _audioForwarder.GetDiagnostics();
+        var elapsedSeconds =
+            (now - _lastDiagnosticsTimestamp) /
+            (double)Stopwatch.Frequency;
+
+        EstimatedLatencyText =
+            $"{diagnostics.EstimatedLatency.TotalMilliseconds:F0} ms";
+        BufferStatusText =
+            $"{diagnostics.BufferedDuration.TotalMilliseconds:F0} / " +
+            $"{diagnostics.PeakBufferedDuration.TotalMilliseconds:F0} ms";
+
+        if (elapsedSeconds > 0)
+        {
+            var capturedBytes =
+                diagnostics.CapturedBytes - _lastCapturedBytes;
+            var captureCallbacks =
+                diagnostics.CaptureCallbackCount -
+                _lastCaptureCallbackCount;
+            CaptureRateText =
+                $"{capturedBytes / elapsedSeconds / 1024:F0} KB/s";
+            CallbackRateText =
+                $"{captureCallbacks / elapsedSeconds:F1} 次/s";
+        }
+
+        var runningDuration = TimeSpan.FromSeconds(
+            (now - _forwardingStartedTimestamp) /
+            (double)Stopwatch.Frequency);
+        ForwardingDurationText =
+            $"{(int)runningDuration.TotalHours:00}:" +
+            $"{runningDuration.Minutes:00}:" +
+            $"{runningDuration.Seconds:00}";
+
+        _lastDiagnosticsTimestamp = now;
+        _lastCapturedBytes = diagnostics.CapturedBytes;
+        _lastCaptureCallbackCount = diagnostics.CaptureCallbackCount;
+    }
+
+    private void ResetDiagnosticsDisplay()
+    {
+        EstimatedLatencyText = "--";
+        BufferStatusText = "--";
+        CaptureRateText = "--";
+        CallbackRateText = "--";
+        ForwardingDurationText = "00:00:00";
     }
 
     private void AudioForwarder_ForwardingFailed(object? sender, Exception exception)
