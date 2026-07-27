@@ -36,7 +36,7 @@ public sealed class PrebufferingWaveProvider : IWaveProvider
         _headroomBytes =
             source.WaveFormat.AverageBytesPerSecond * 20 / 1000;
         _trimHysteresisBytes =
-            source.WaveFormat.AverageBytesPerSecond * 40 / 1000;
+            source.WaveFormat.AverageBytesPerSecond * 100 / 1000;
     }
 
     public WaveFormat WaveFormat => _source.WaveFormat;

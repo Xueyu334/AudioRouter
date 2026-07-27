@@ -13,6 +13,7 @@ public sealed class AudioForwarder : IDisposable
     private WasapiOut? _output;
     private BufferedWaveProvider? _buffer;
     private PrebufferingWaveProvider? _prebuffer;
+    private AdaptiveResamplingSampleProvider? _adaptiveResampler;
     private MediaFoundationResampler? _resampler;
     private bool _isStopping;
 
@@ -44,15 +45,20 @@ public sealed class AudioForwarder : IDisposable
                     ReadFully = true
                 };
 
+                var prebufferDuration = TimeSpan.FromMilliseconds(
+                    Math.Max(
+                        latencyMilliseconds - OutputLatencyMilliseconds,
+                        20));
                 _prebuffer = new PrebufferingWaveProvider(
                     _buffer,
-                    TimeSpan.FromMilliseconds(
-                        Math.Max(
-                            latencyMilliseconds - OutputLatencyMilliseconds,
-                            20)));
+                    prebufferDuration);
+                _adaptiveResampler = new AdaptiveResamplingSampleProvider(
+                    _prebuffer.ToSampleProvider(),
+                    () => _buffer?.BufferedDuration ?? TimeSpan.Zero,
+                    prebufferDuration);
 
                 _resampler = new MediaFoundationResampler(
-                    _prebuffer,
+                    _adaptiveResampler.ToWaveProvider(),
                     _outputDevice.AudioClient.MixFormat)
                 {
                     ResamplerQuality = 60
@@ -160,6 +166,7 @@ public sealed class AudioForwarder : IDisposable
 
         _resampler?.Dispose();
         _resampler = null;
+        _adaptiveResampler = null;
         _prebuffer = null;
         _buffer = null;
 
