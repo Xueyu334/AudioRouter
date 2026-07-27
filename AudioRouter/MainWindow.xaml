@@ -13,14 +13,42 @@
         MinHeight="620"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing"
-        Background="#F4F6FA"
+        Background="{DynamicResource AppBackgroundBrush}"
         FontFamily="Microsoft YaHei UI"
-        FontSize="14">
+        FontSize="14"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
     <Window.Resources>
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F5F7FB" />
+        <SolidColorBrush x:Key="AppSurfaceBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="AppSecondarySurfaceBrush" Color="#F8FAFC" />
+        <SolidColorBrush x:Key="AppBorderBrush" Color="#E5EAF2" />
+        <SolidColorBrush x:Key="AppPrimaryTextBrush" Color="#111827" />
+        <SolidColorBrush x:Key="AppSecondaryTextBrush" Color="#64748B" />
+        <SolidColorBrush x:Key="AppMutedTextBrush" Color="#94A3B8" />
+        <SolidColorBrush x:Key="AppBrandBrush" Color="#2563EB" />
+        <SolidColorBrush x:Key="AppBrandHoverBrush" Color="#1D4ED8" />
+        <SolidColorBrush x:Key="AppBrandTintBrush" Color="#EFF6FF" />
+        <SolidColorBrush x:Key="AppHealthyBrush" Color="#16A34A" />
+        <SolidColorBrush x:Key="AppHealthyTintBrush" Color="#ECFDF3" />
+        <SolidColorBrush x:Key="AppWarningBrush" Color="#D97706" />
+        <SolidColorBrush x:Key="AppWarningTintBrush" Color="#FFF7ED" />
+        <SolidColorBrush x:Key="AppDangerBrush" Color="#DC2626" />
+        <SolidColorBrush x:Key="AppDangerHoverBrush" Color="#B91C1C" />
+        <SolidColorBrush x:Key="AppStoppedBrush" Color="#94A3B8" />
+        <SolidColorBrush x:Key="AppStoppedTintBrush" Color="#F1F5F9" />
+
+        <DropShadowEffect x:Key="SurfaceShadow"
+                          BlurRadius="18"
+                          Direction="270"
+                          Opacity="0.09"
+                          ShadowDepth="3"
+                          Color="#334155" />
+
         <Style x:Key="ActionButtonBaseStyle" TargetType="Button">
             <Setter Property="Height" Value="42" />
             <Setter Property="Padding" Value="18,0" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
@@ -37,18 +65,19 @@
                                 CornerRadius="9"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder"
                                         Property="Opacity"
-                                        Value="0.94" />
+                                        Value="0.92" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonBorder"
                                         Property="Opacity"
-                                        Value="0.78" />
+                                        Value="0.76" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="ButtonBorder"
@@ -61,31 +90,29 @@
             </Setter>
         </Style>
 
-        <Style x:Key="PrimaryButtonStyle"
+        <Style x:Key="TransportButtonStyle"
                BasedOn="{StaticResource ActionButtonBaseStyle}"
                TargetType="Button">
+            <Setter Property="Width" Value="156" />
+            <Setter Property="Height" Value="44" />
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="Background" Value="#2563EB" />
-            <Setter Property="BorderBrush" Value="#2563EB" />
+            <Setter Property="Background" Value="{DynamicResource AppBrandBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBrandBrush}" />
+            <Setter Property="Command" Value="{Binding StartCommand}" />
+            <Setter Property="Content" Value="▶  开始转发" />
             <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1D4ED8" />
-                    <Setter Property="BorderBrush" Value="#1D4ED8" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="StopButtonStyle"
-               BasedOn="{StaticResource ActionButtonBaseStyle}"
-               TargetType="Button">
-            <Setter Property="Foreground" Value="#DC2626" />
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#FDA4AF" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FFF1F2" />
-                    <Setter Property="BorderBrush" Value="#FB7185" />
-                </Trigger>
+                <DataTrigger Binding="{Binding IsForwarding}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppDangerBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppDangerBrush}" />
+                    <Setter Property="Command" Value="{Binding StopCommand}" />
+                    <Setter Property="Content" Value="■  停止转发" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppWarningBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppWarningBrush}" />
+                    <Setter Property="Command" Value="{Binding StopCommand}" />
+                    <Setter Property="Content" Value="■  停止恢复" />
+                </DataTrigger>
             </Style.Triggers>
         </Style>
 
@@ -93,417 +120,837 @@
                BasedOn="{StaticResource ActionButtonBaseStyle}"
                TargetType="Button">
             <Setter Property="Height" Value="36" />
-            <Setter Property="Padding" Value="14,0" />
-            <Setter Property="Foreground" Value="#475569" />
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#DCE3ED" />
+            <Setter Property="Padding" Value="13,0" />
+            <Setter Property="Foreground" Value="{DynamicResource AppBrandBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppBrandTintBrush}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
-        <Style x:Key="StepCircleStyle" TargetType="Border">
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="30" />
-            <Setter Property="CornerRadius" Value="15" />
-            <Setter Property="Background" Value="#EFF6FF" />
+        <Style x:Key="SurfaceCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+
+        <Style x:Key="RaisedSurfaceCardStyle"
+               BasedOn="{StaticResource SurfaceCardStyle}"
+               TargetType="Border">
+            <Setter Property="Effect" Value="{StaticResource SurfaceShadow}" />
+        </Style>
+
+        <Style x:Key="DeviceCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Background" Value="{DynamicResource AppSecondarySurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+
+        <Style x:Key="ProcessingCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Background" Value="{DynamicResource AppBrandTintBrush}" />
             <Setter Property="BorderBrush" Value="#BFDBFE" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
         </Style>
 
-        <Style x:Key="FieldTitleStyle" TargetType="TextBlock">
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Margin" Value="4" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="MinHeight" Value="72" />
+            <Setter Property="Background" Value="{DynamicResource AppSecondarySurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+        </Style>
+
+        <Style x:Key="AdvancedMetricCardStyle"
+               BasedOn="{StaticResource MetricCardStyle}"
+               TargetType="Border">
+            <Setter Property="MinHeight" Value="68" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AppPrimaryTextBrush}" />
+        </Style>
+
+        <Style x:Key="SectionHintStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,3,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource AppMutedTextBrush}" />
+        </Style>
+
+        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#1E293B" />
+            <Setter Property="Foreground" Value="{DynamicResource AppPrimaryTextBrush}" />
         </Style>
 
-        <Style x:Key="FieldHintStyle" TargetType="TextBlock">
-            <Setter Property="Margin" Value="0,3,0,9" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#94A3B8" />
+        <Style x:Key="CaptionStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource AppMutedTextBrush}" />
+        </Style>
+
+        <Style x:Key="MetricLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource AppMutedTextBrush}" />
+        </Style>
+
+        <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource AppPrimaryTextBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style x:Key="StatusPillStyle" TargetType="Border">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Background" Value="{DynamicResource AppStoppedTintBrush}" />
+            <Setter Property="BorderBrush" Value="#E2E8F0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsForwarding}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppHealthyTintBrush}" />
+                    <Setter Property="BorderBrush" Value="#BBF7D0" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppWarningTintBrush}" />
+                    <Setter Property="BorderBrush" Value="#FED7AA" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Fill" Value="{DynamicResource AppStoppedBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsForwarding}" Value="True">
+                    <Setter Property="Fill" Value="{DynamicResource AppHealthyBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                    <Setter Property="Fill" Value="{DynamicResource AppWarningBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AppSecondaryTextBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsForwarding}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AppHealthyBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AppWarningBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusDescriptionStyle" TargetType="TextBlock">
+            <Setter Property="Text" Value="选择监听和输出设备后即可开始转发" />
+            <Setter Property="Foreground" Value="{DynamicResource AppMutedTextBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsForwarding}" Value="True">
+                    <Setter Property="Text" Value="音频正在通过当前链路实时传输" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                    <Setter Property="Text" Value="设备连接中断，正在等待自动恢复" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusIconSurfaceStyle" TargetType="Border">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Background" Value="{DynamicResource AppStoppedTintBrush}" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsForwarding}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppHealthyTintBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppWarningTintBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="100" />
+            <RowDefinition Height="58" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="68" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Offset="0" Color="#1E40AF" />
-                    <GradientStop Offset="1" Color="#2563EB" />
-                </LinearGradientBrush>
-            </Border.Background>
-            <Grid Margin="36,22,36,28">
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock FontSize="25"
-                               FontWeight="Bold"
-                               Foreground="White"
-                               Text="音频转发器" />
-                    <TextBlock Margin="0,6,0,0"
-                               FontSize="13"
-                               Foreground="#BFDBFE"
-                               Text="将系统声音低延迟地转发到另一播放设备" />
+        <!-- 顶部紧凑应用栏 -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource AppSurfaceBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid Margin="22,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Border Width="34"
+                            Height="34"
+                            Margin="0,0,11,0"
+                            Background="{DynamicResource AppBrandBrush}"
+                            CornerRadius="9">
+                        <TextBlock HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontFamily="Segoe UI Symbol"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   Text="♪" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontSize="17"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppPrimaryTextBrush}"
+                                   Text="音频转发器" />
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource AppMutedTextBrush}"
+                                   Text="低延迟设备音频路由" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Border Margin="0,0,8,0"
+                            Style="{StaticResource StatusPillStyle}">
+                        <StackPanel VerticalAlignment="Center"
+                                    Orientation="Horizontal">
+                            <Ellipse Margin="0,0,7,0"
+                                     Style="{StaticResource StatusDotStyle}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Style="{StaticResource StatusTextStyle}"
+                                       Text="{Binding StatusText}" />
+                        </StackPanel>
+                    </Border>
+                    <Button Command="{Binding RefreshDevicesCommand}"
+                            Content="↻  刷新设备"
+                            Style="{StaticResource RefreshButtonStyle}" />
                 </StackPanel>
             </Grid>
         </Border>
 
+        <!-- 中部音频链路与性能区域 -->
         <ScrollViewer Grid.Row="1"
-                      Margin="0,-18,0,0"
                       CanContentScroll="False"
                       HorizontalScrollBarVisibility="Disabled"
                       PanningMode="VerticalOnly"
                       VerticalScrollBarVisibility="Hidden">
-            <hc:Card Margin="28,0,28,26"
-                     Padding="0">
-                <Grid Margin="28,24,28,26">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="20" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="14" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="18" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="22" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="22" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+            <Grid Margin="22,16,22,18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="14" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="12" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock FontSize="16"
-                                       FontWeight="SemiBold"
-                                       Foreground="#0F172A"
-                                       Text="音频路由" />
-                            <TextBlock Margin="0,3,0,0"
-                                       FontSize="12"
-                                       Foreground="#94A3B8"
-                                       Text="选择声音来源与转发目标" />
-                        </StackPanel>
+                <!-- 音频链路 -->
+                <Border Grid.Row="0"
+                        Padding="18"
+                        Style="{StaticResource RaisedSurfaceCardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="14" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                        <StackPanel HorizontalAlignment="Right"
+                        <Grid Grid.Row="0">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitleStyle}"
+                                           Text="音频链路" />
+                                <TextBlock Style="{StaticResource SectionHintStyle}"
+                                           Text="从系统播放设备捕获声音，经过低延迟处理后发送到目标设备" />
+                            </StackPanel>
+                            <Border HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    Orientation="Horizontal">
-                            <Border Height="32"
-                                    Margin="0,0,10,0"
-                                    Padding="12,0"
-                                    Background="#F1F5F9"
-                                    CornerRadius="16">
-                                <StackPanel VerticalAlignment="Center"
-                                            Orientation="Horizontal">
-                                    <Ellipse Width="8"
-                                             Height="8"
-                                             Margin="0,0,7,0">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="#94A3B8" />
+                                    Padding="10,5"
+                                    Background="{DynamicResource AppBrandTintBrush}"
+                                    CornerRadius="12">
+                                <TextBlock FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AppBrandBrush}"
+                                           Text="WASAPI LOOPBACK" />
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="54" />
+                                <ColumnDefinition Width="210" />
+                                <ColumnDefinition Width="54" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 监听设备 -->
+                            <Border Grid.Column="0"
+                                    Style="{StaticResource DeviceCardStyle}">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="32"
+                                                Height="32"
+                                                HorizontalAlignment="Left"
+                                                Background="{DynamicResource AppBrandTintBrush}"
+                                                CornerRadius="8">
+                                            <Grid>
+                                                <Path Width="16"
+                                                      Height="16"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Data="M2,8 L6,8 L11,4 L11,20 L6,16 L2,16 Z"
+                                                      Fill="{DynamicResource AppBrandBrush}"
+                                                      Stretch="Uniform" />
+                                                <Path Width="16"
+                                                      Height="16"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Data="M13,8 C15,10 15,14 13,16 M16,5 C20,9 20,15 16,19"
+                                                      Stroke="{DynamicResource AppBrandBrush}"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeThickness="1.8"
+                                                      Stretch="Uniform" />
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource CardTitleStyle}"
+                                                       Text="声音来源" />
+                                            <TextBlock Style="{StaticResource CaptionStyle}"
+                                                       Text="监听播放设备" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock Margin="0,12,0,7"
+                                               Style="{StaticResource CaptionStyle}"
+                                               Text="捕获此设备当前播放的系统声音" />
+                                    <hc:ComboBox Height="44"
+                                                 Padding="12,0"
+                                                 DisplayMemberPath="Name"
+                                                 FontSize="13"
+                                                 IsEnabled="{Binding IsConfigurationEnabled}"
+                                                 ItemsSource="{Binding Devices}"
+                                                 MaxDropDownHeight="280"
+                                                 SelectedItem="{Binding SelectedListeningDevice}"
+                                                 ToolTip="{Binding SelectedListeningDevice.Name}" />
+                                    <StackPanel Margin="0,10,0,0"
+                                                Orientation="Horizontal">
+                                        <Ellipse Width="7"
+                                                 Height="7"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill"
+                                                            Value="{DynamicResource AppHealthyBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedListeningDevice}"
+                                                                     Value="{x:Null}">
+                                                            <Setter Property="Fill"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsRecovering}"
+                                                                     Value="True">
+                                                            <Setter Property="Fill"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock FontSize="11">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource AppHealthyBrush}" />
+                                                    <Setter Property="Text"
+                                                            Value="设备可用 · Loopback 捕获" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedListeningDevice}"
+                                                                     Value="{x:Null}">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                            <Setter Property="Text"
+                                                                    Value="请选择监听设备" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsRecovering}"
+                                                                     Value="True">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                            <Setter Property="Text"
+                                                                    Value="等待监听设备恢复" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 输入到处理的流向 -->
+                            <Grid Grid.Column="1"
+                                  Margin="10,0"
+                                  VerticalAlignment="Center">
+                                <Rectangle Height="2"
+                                           Margin="0,0,6,0"
+                                           Fill="#BFDBFE" />
+                                <Path Width="7"
+                                      Height="11"
+                                      HorizontalAlignment="Right"
+                                      Data="M0,0 L7,5.5 L0,11 Z"
+                                      Fill="#60A5FA"
+                                      Stretch="Fill" />
+                            </Grid>
+
+                            <!-- 音频处理 -->
+                            <Border Grid.Column="2"
+                                    Style="{StaticResource ProcessingCardStyle}">
+                                <StackPanel>
+                                    <StackPanel HorizontalAlignment="Center"
+                                                Orientation="Horizontal">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Opacity" Value="0.45" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsForwarding}"
                                                                  Value="True">
-                                                        <Setter Property="Fill" Value="#22C55E" />
+                                                        <Setter Property="Opacity" Value="1" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsRecovering}"
                                                                  Value="True">
-                                                        <Setter Property="Fill" Value="#F59E0B" />
+                                                        <Setter Property="Opacity" Value="0.65" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
-                                    <TextBlock VerticalAlignment="Center"
-                                               FontSize="12"
-                                               FontWeight="SemiBold"
-                                               Foreground="#475569"
-                                               Text="{Binding StatusText}" />
+                                        </StackPanel.Style>
+                                        <Border Width="4"
+                                                Height="12"
+                                                Margin="2,0"
+                                                VerticalAlignment="Bottom"
+                                                Background="#93C5FD"
+                                                CornerRadius="2" />
+                                        <Border Width="4"
+                                                Height="21"
+                                                Margin="2,0"
+                                                VerticalAlignment="Bottom"
+                                                Background="{DynamicResource AppBrandBrush}"
+                                                CornerRadius="2" />
+                                        <Border Width="4"
+                                                Height="28"
+                                                Margin="2,0"
+                                                VerticalAlignment="Bottom"
+                                                Background="#60A5FA"
+                                                CornerRadius="2" />
+                                        <Border Width="4"
+                                                Height="17"
+                                                Margin="2,0"
+                                                VerticalAlignment="Bottom"
+                                                Background="{DynamicResource AppBrandBrush}"
+                                                CornerRadius="2" />
+                                        <Border Width="4"
+                                                Height="24"
+                                                Margin="2,0"
+                                                VerticalAlignment="Bottom"
+                                                Background="#93C5FD"
+                                                CornerRadius="2" />
+                                    </StackPanel>
+                                    <TextBlock Margin="0,9,0,0"
+                                               HorizontalAlignment="Center"
+                                               Style="{StaticResource CardTitleStyle}"
+                                               Text="音频处理" />
+                                    <TextBlock Margin="0,2,0,0"
+                                               HorizontalAlignment="Center"
+                                               Style="{StaticResource CaptionStyle}"
+                                               Text="共享模式 · 低延迟链路" />
+
+                                    <Grid Margin="0,13,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="112" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource AppSecondaryTextBrush}"
+                                                   Text="目标延迟" />
+                                        <hc:ComboBox Grid.Column="1"
+                                                     Height="38"
+                                                     Padding="10,0"
+                                                     IsEnabled="{Binding IsConfigurationEnabled}"
+                                                     ItemsSource="{Binding LatencyOptions}"
+                                                     SelectedItem="{Binding SelectedLatency}">
+                                            <hc:ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StringFormat={}{0} ms}" />
+                                                </DataTemplate>
+                                            </hc:ComboBox.ItemTemplate>
+                                        </hc:ComboBox>
+                                    </Grid>
+
+                                    <StackPanel Margin="0,11,0,0"
+                                                HorizontalAlignment="Center"
+                                                Orientation="Horizontal">
+                                        <Ellipse Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 Style="{StaticResource StatusDotStyle}" />
+                                        <TextBlock VerticalAlignment="Center"
+                                                   FontSize="11"
+                                                   Style="{StaticResource StatusTextStyle}"
+                                                   Text="{Binding StatusText}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
-                            <Button Command="{Binding RefreshDevicesCommand}"
-                                    Content="↻  刷新"
-                                    Style="{StaticResource RefreshButtonStyle}" />
-                        </StackPanel>
-                    </Grid>
 
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="42" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border VerticalAlignment="Top"
-                                Style="{StaticResource StepCircleStyle}">
-                            <TextBlock HorizontalAlignment="Center"
+                            <!-- 处理到输出的流向 -->
+                            <Grid Grid.Column="3"
+                                  Margin="10,0"
+                                  VerticalAlignment="Center">
+                                <Rectangle Height="2"
+                                           Margin="0,0,6,0"
+                                           Fill="#BFDBFE" />
+                                <Path Width="7"
+                                      Height="11"
+                                      HorizontalAlignment="Right"
+                                      Data="M0,0 L7,5.5 L0,11 Z"
+                                      Fill="#60A5FA"
+                                      Stretch="Fill" />
+                            </Grid>
+
+                            <!-- 输出设备 -->
+                            <Border Grid.Column="4"
+                                    Style="{StaticResource DeviceCardStyle}">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="38" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="32"
+                                                Height="32"
+                                                HorizontalAlignment="Left"
+                                                Background="{DynamicResource AppBrandTintBrush}"
+                                                CornerRadius="8">
+                                            <Path Width="18"
+                                                  Height="18"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Data="M4,12 A8,8 0 0 1 20,12 M4,12 L4,18 Q4,20 6,20 L8,20 L8,13 L5,13 M20,12 L20,18 Q20,20 18,20 L16,20 L16,13 L19,13"
+                                                  Stroke="{DynamicResource AppBrandBrush}"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeThickness="2"
+                                                  Stretch="Uniform" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource CardTitleStyle}"
+                                                       Text="输出设备" />
+                                            <TextBlock Style="{StaticResource CaptionStyle}"
+                                                       Text="转发播放目标" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBlock Margin="0,12,0,7"
+                                               Style="{StaticResource CaptionStyle}"
+                                               Text="将捕获的声音实时发送到此设备" />
+                                    <hc:ComboBox Height="44"
+                                                 Padding="12,0"
+                                                 DisplayMemberPath="Name"
+                                                 FontSize="13"
+                                                 IsEnabled="{Binding IsConfigurationEnabled}"
+                                                 ItemsSource="{Binding Devices}"
+                                                 MaxDropDownHeight="280"
+                                                 SelectedItem="{Binding SelectedOutputDevice}"
+                                                 ToolTip="{Binding SelectedOutputDevice.Name}" />
+                                    <StackPanel Margin="0,10,0,0"
+                                                Orientation="Horizontal">
+                                        <Ellipse Width="7"
+                                                 Height="7"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill"
+                                                            Value="{DynamicResource AppHealthyBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedOutputDevice}"
+                                                                     Value="{x:Null}">
+                                                            <Setter Property="Fill"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsRecovering}"
+                                                                     Value="True">
+                                                            <Setter Property="Fill"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock FontSize="11">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground"
+                                                            Value="{DynamicResource AppHealthyBrush}" />
+                                                    <Setter Property="Text"
+                                                            Value="设备可用 · WASAPI 输出" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedOutputDevice}"
+                                                                     Value="{x:Null}">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                            <Setter Property="Text"
+                                                                    Value="请选择输出设备" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsRecovering}"
+                                                                     Value="True">
+                                                            <Setter Property="Foreground"
+                                                                    Value="{DynamicResource AppWarningBrush}" />
+                                                            <Setter Property="Text"
+                                                                    Value="等待输出设备恢复" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- 普通模式性能摘要 -->
+                <Border Grid.Row="2"
+                        Padding="14"
+                        Style="{StaticResource SurfaceCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="4,0,4,7">
+                            <TextBlock Style="{StaticResource SectionTitleStyle}"
+                                       Text="实时状态" />
+                            <TextBlock HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
-                                       FontSize="12"
-                                       FontWeight="Bold"
-                                       Foreground="#2563EB"
-                                       Text="1" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Style="{StaticResource FieldTitleStyle}"
-                                       Text="监听设备" />
-                            <TextBlock Style="{StaticResource FieldHintStyle}"
-                                       Text="捕获此设备当前播放的全部系统声音" />
-                            <hc:ComboBox Height="42"
-                                         Padding="12,0"
-                                         DisplayMemberPath="Name"
-                                         IsEnabled="{Binding IsConfigurationEnabled}"
-                                         ItemsSource="{Binding Devices}"
-                                         SelectedItem="{Binding SelectedListeningDevice}" />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Grid.Row="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="42" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border VerticalAlignment="Top"
-                                Style="{StaticResource StepCircleStyle}">
-                            <TextBlock HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       FontSize="12"
-                                       FontWeight="Bold"
-                                       Foreground="#2563EB"
-                                       Text="2" />
-                        </Border>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Style="{StaticResource FieldTitleStyle}"
-                                       Text="输出设备" />
-                            <TextBlock Style="{StaticResource FieldHintStyle}"
-                                       Text="将捕获到的声音实时发送到此设备" />
-                            <hc:ComboBox Height="42"
-                                         Padding="12,0"
-                                         DisplayMemberPath="Name"
-                                         IsEnabled="{Binding IsConfigurationEnabled}"
-                                         ItemsSource="{Binding Devices}"
-                                         SelectedItem="{Binding SelectedOutputDevice}" />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Grid.Row="6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="42" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="140" />
-                        </Grid.ColumnDefinitions>
-                        <Border VerticalAlignment="Center"
-                                Style="{StaticResource StepCircleStyle}">
-                            <TextBlock HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       FontSize="12"
-                                       FontWeight="Bold"
-                                       Foreground="#2563EB"
-                                       Text="3" />
-                        </Border>
-                        <StackPanel Grid.Column="1"
-                                    VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource FieldTitleStyle}"
-                                       Text="缓冲延迟" />
-                            <TextBlock Margin="0,3,0,0"
-                                       FontSize="12"
-                                       Foreground="#94A3B8"
-                                       Text="推荐使用 50–100 ms" />
-                        </StackPanel>
-                        <hc:ComboBox Grid.Column="2"
-                                     Height="42"
-                                     Padding="12,0"
-                                     IsEnabled="{Binding IsConfigurationEnabled}"
-                                     ItemsSource="{Binding LatencyOptions}"
-                                     SelectedItem="{Binding SelectedLatency}">
-                            <hc:ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding StringFormat={}{0} ms}" />
-                                </DataTemplate>
-                            </hc:ComboBox.ItemTemplate>
-                        </hc:ComboBox>
-                    </Grid>
-
-                    <StackPanel Grid.Row="8">
-                        <TextBlock Margin="0,0,0,9"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="#475569"
-                                   Text="实时性能" />
-                        <UniformGrid Columns="5">
-                            <Border Margin="0,0,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
+                                       Style="{StaticResource SectionHintStyle}"
+                                       Text="核心指标" />
+                        </Grid>
+                        <UniformGrid Columns="4">
+                            <Border Style="{StaticResource MetricCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="配置档位" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               Text="{Binding TargetLatencyText}" />
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="估算延迟" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding EstimatedLatencyText}"
+                                               ToolTip="{Binding EstimatedLatencyText}" />
                                 </StackPanel>
                             </Border>
-                            <Border Margin="0,0,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
+                            <Border Style="{StaticResource MetricCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="软件路径估算（约）" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               Text="{Binding EstimatedLatencyText}" />
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="当前 / 峰值缓冲" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding BufferStatusText}"
+                                               ToolTip="{Binding BufferStatusText}" />
                                 </StackPanel>
                             </Border>
-                            <Border Margin="0,0,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
+                            <Border Style="{StaticResource MetricCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="缓冲 当前/峰值" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               Text="{Binding BufferStatusText}" />
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="输出状态" />
+                                    <TextBlock Text="{Binding StatusText}"
+                                               ToolTip="{Binding StatusText}">
+                                        <TextBlock.Style>
+                                            <Style BasedOn="{StaticResource MetricValueStyle}"
+                                                   TargetType="TextBlock">
+                                                <Setter Property="Foreground"
+                                                        Value="{DynamicResource AppStoppedBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsForwarding}"
+                                                                 Value="True">
+                                                        <Setter Property="Foreground"
+                                                                Value="{DynamicResource AppHealthyBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsRecovering}"
+                                                                 Value="True">
+                                                        <Setter Property="Foreground"
+                                                                Value="{DynamicResource AppWarningBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
                             </Border>
-                            <Border Margin="0,0,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
+                            <Border Style="{StaticResource MetricCardStyle}">
                                 <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="活动管线 / 请求周期" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding PipelineStatusText}"
-                                               Text="{Binding PipelineStatusText}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,0,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="捕获速率" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               Text="{Binding CaptureRateText}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,6,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="有效输出 / 累计补零" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding OutputRateText}"
-                                               Text="{Binding OutputRateText}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,6,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="捕获回调 / 最大间隔" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding CallbackRateText}"
-                                               Text="{Binding CallbackRateText}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,6,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="欠载 / 重缓冲" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding RecoveryStatsText}"
-                                               Text="{Binding RecoveryStatsText}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,6,6,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
-                                               Text="时钟校正 / 丢弃" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding DriftStatusText}"
-                                               Text="{Binding DriftStatusText}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Margin="0,6,0,0"
-                                    Padding="9,8"
-                                    Background="#F8FAFC"
-                                    CornerRadius="6">
-                                <StackPanel>
-                                    <TextBlock FontSize="11"
-                                               Foreground="#94A3B8"
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
                                                Text="运行时间" />
-                                    <TextBlock Margin="0,4,0,0"
-                                               FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="#0F172A"
-                                               Text="{Binding ForwardingDurationText}" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding ForwardingDurationText}"
+                                               ToolTip="{Binding ForwardingDurationText}" />
                                 </StackPanel>
                             </Border>
                         </UniformGrid>
                     </StackPanel>
+                </Border>
 
-                    <StackPanel Grid.Row="10"
-                                HorizontalAlignment="Center"
-                                Orientation="Horizontal">
-                        <Button Width="148"
-                                Command="{Binding StartCommand}"
-                                Content="▶  开始转发"
-                                Style="{StaticResource PrimaryButtonStyle}" />
-                        <Button Width="148"
-                                Margin="10,0,0,0"
-                                Command="{Binding StopCommand}"
-                                Content="■  停止转发"
-                                Style="{StaticResource StopButtonStyle}" />
-                    </StackPanel>
-                </Grid>
-            </hc:Card>
+                <!-- 默认折叠的高级性能数据 -->
+                <Border Grid.Row="4"
+                        Padding="14,6"
+                        Style="{StaticResource SurfaceCardStyle}">
+                    <Expander IsExpanded="False"
+                              Style="{StaticResource Expander.Small}">
+                        <Expander.Header>
+                            <StackPanel Margin="2,2,0,2"
+                                        Orientation="Horizontal">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AppPrimaryTextBrush}"
+                                           Text="高级性能数据" />
+                                <Border Margin="9,0,0,0"
+                                        Padding="8,3"
+                                        Background="{DynamicResource AppStoppedTintBrush}"
+                                        CornerRadius="10">
+                                    <TextBlock FontSize="10"
+                                               Foreground="{DynamicResource AppSecondaryTextBrush}"
+                                               Text="详细诊断" />
+                                </Border>
+                            </StackPanel>
+                        </Expander.Header>
+
+                        <UniformGrid Margin="0,10,0,4"
+                                     Columns="3">
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="配置档位" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding TargetLatencyText}"
+                                               ToolTip="{Binding TargetLatencyText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="活动管线 / 请求周期" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding PipelineStatusText}"
+                                               ToolTip="{Binding PipelineStatusText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="捕获速率" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding CaptureRateText}"
+                                               ToolTip="{Binding CaptureRateText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="有效输出 / 累计补零" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding OutputRateText}"
+                                               ToolTip="{Binding OutputRateText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="捕获回调 / 最大间隔" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding CallbackRateText}"
+                                               ToolTip="{Binding CallbackRateText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="欠载 / 重缓冲" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding RecoveryStatsText}"
+                                               ToolTip="{Binding RecoveryStatsText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource AdvancedMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource MetricLabelStyle}"
+                                               Text="时钟校正 / 丢弃" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}"
+                                               Text="{Binding DriftStatusText}"
+                                               ToolTip="{Binding DriftStatusText}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </Expander>
+                </Border>
+            </Grid>
         </ScrollViewer>
+
+        <!-- 底部状态与单一控制区 -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource AppSurfaceBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid Margin="22,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Border Margin="0,0,11,0"
+                            Style="{StaticResource StatusIconSurfaceStyle}">
+                        <Ellipse HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Style="{StaticResource StatusDotStyle}" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontSize="13"
+                                   Style="{StaticResource StatusTextStyle}"
+                                   Text="{Binding StatusText}" />
+                        <TextBlock Margin="0,2,0,0"
+                                   Style="{StaticResource StatusDescriptionStyle}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Style="{StaticResource TransportButtonStyle}" />
+            </Grid>
+        </Border>
     </Grid>
 </Window>
