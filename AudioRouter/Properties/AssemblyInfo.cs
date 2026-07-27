@@ -7,11 +7,11 @@ using System.Windows;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("AudioRouter")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("音频转发器")]
+[assembly: AssemblyDescription("将指定播放设备的音频转发到另一输出设备")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("RichRain")]
-[assembly: AssemblyProduct("AudioRouter")]
+[assembly: AssemblyProduct("音频转发器")]
 [assembly: AssemblyCopyright("Copyright © RichRain 2026")]
 [assembly: AssemblyTrademark("AudioRouter")]
 [assembly: AssemblyCulture("")]

@@ -3,10 +3,179 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:AudioRouter"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
-    <Grid>
-        
+        Title="音频转发器"
+        Width="620"
+        Height="520"
+        MinWidth="560"
+        MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Closing="Window_Closing"
+        Background="#F3F6FA"
+        FontFamily="Microsoft YaHei UI"
+        FontSize="14">
+    <Window.Resources>
+        <Style x:Key="DeviceComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="112"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="BorderBrush" Value="#2563EB"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="88"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="Background" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="32">
+        <Border Padding="34,28"
+                Background="White"
+                BorderBrush="#E2E8F0"
+                BorderThickness="1"
+                CornerRadius="10">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18"
+                                  Direction="270"
+                                  Opacity="0.10"
+                                  ShadowDepth="4"/>
+            </Border.Effect>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="24"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="24"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="28"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="86"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Row="0" Grid.ColumnSpan="2">
+                    <StackPanel>
+                        <TextBlock FontSize="24"
+                                   FontWeight="SemiBold"
+                                   Foreground="#0F172A"
+                                   Text="音频转发器"/>
+                        <TextBlock Margin="0,6,0,0"
+                                   FontSize="13"
+                                   Foreground="#64748B"
+                                   Text="将指定播放设备的音频转发到另一输出设备"/>
+                    </StackPanel>
+                    <Button x:Name="RefreshButton"
+                            Width="96"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Click="RefreshButton_Click"
+                            Content="刷新设备"
+                            Style="{StaticResource SecondaryButtonStyle}"/>
+                </Grid>
+
+                <TextBlock Grid.Row="2"
+                           VerticalAlignment="Center"
+                           Foreground="#334155"
+                           Text="监听设备："/>
+                <ComboBox x:Name="ListeningDeviceComboBox"
+                          Grid.Row="2"
+                          Grid.Column="1"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          Style="{StaticResource DeviceComboBoxStyle}"
+                          SelectionChanged="ListeningDeviceComboBox_SelectionChanged"/>
+
+                <TextBlock Grid.Row="4"
+                           VerticalAlignment="Center"
+                           Foreground="#334155"
+                           Text="输出设备："/>
+                <ComboBox x:Name="OutputDeviceComboBox"
+                          Grid.Row="4"
+                          Grid.Column="1"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          Style="{StaticResource DeviceComboBoxStyle}"
+                          SelectionChanged="OutputDeviceComboBox_SelectionChanged"/>
+
+                <TextBlock Grid.Row="6"
+                           VerticalAlignment="Center"
+                           Foreground="#334155"
+                           Text="缓冲延迟："/>
+                <ComboBox x:Name="BufferDelayComboBox"
+                          Grid.Row="6"
+                          Grid.Column="1"
+                          Width="130"
+                          HorizontalAlignment="Left"
+                          Style="{StaticResource DeviceComboBoxStyle}"
+                          SelectedIndex="1"
+                          SelectionChanged="BufferDelayComboBox_SelectionChanged">
+                    <ComboBoxItem Content="50 ms"/>
+                    <ComboBoxItem Content="100 ms"/>
+                    <ComboBoxItem Content="150 ms"/>
+                    <ComboBoxItem Content="200 ms"/>
+                </ComboBox>
+
+                <TextBlock Grid.Row="8"
+                           VerticalAlignment="Center"
+                           Foreground="#334155"
+                           Text="状态："/>
+                <StackPanel Grid.Row="8"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Ellipse x:Name="StatusIndicator"
+                             Width="10"
+                             Height="10"
+                             Margin="0,0,8,0"
+                             Fill="#94A3B8"/>
+                    <TextBlock x:Name="StatusText"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               Foreground="#64748B"
+                               Text="已停止"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="10"
+                            Grid.Column="1"
+                            HorizontalAlignment="Left"
+                            Orientation="Horizontal">
+                    <Button x:Name="StartButton"
+                            Click="StartButton_Click"
+                            Content="开始转发"
+                            Style="{StaticResource PrimaryButtonStyle}"/>
+                    <Button x:Name="StopButton"
+                            Margin="12,0,0,0"
+                            Click="StopButton_Click"
+                            Content="停止"
+                            IsEnabled="False"
+                            Style="{StaticResource SecondaryButtonStyle}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
