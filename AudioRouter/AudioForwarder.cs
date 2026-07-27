@@ -5,6 +5,7 @@ namespace AudioRouter;
 
 public sealed class AudioForwarder : IDisposable
 {
+    private const int OutputLatencyMilliseconds = 30;
     private readonly object _syncRoot = new();
     private MMDevice? _sourceDevice;
     private MMDevice? _outputDevice;
@@ -45,7 +46,10 @@ public sealed class AudioForwarder : IDisposable
 
                 _prebuffer = new PrebufferingWaveProvider(
                     _buffer,
-                    TimeSpan.FromMilliseconds(latencyMilliseconds));
+                    TimeSpan.FromMilliseconds(
+                        Math.Max(
+                            latencyMilliseconds - OutputLatencyMilliseconds,
+                            20)));
 
                 _resampler = new MediaFoundationResampler(
                     _prebuffer,
@@ -58,7 +62,7 @@ public sealed class AudioForwarder : IDisposable
                     _outputDevice,
                     AudioClientShareMode.Shared,
                     false,
-                    latencyMilliseconds);
+                    OutputLatencyMilliseconds);
 
                 _capture.DataAvailable += Capture_DataAvailable;
                 _capture.RecordingStopped += Capture_RecordingStopped;
@@ -111,6 +115,7 @@ public sealed class AudioForwarder : IDisposable
         if (e.BytesRecorded > 0)
         {
             _buffer?.AddSamples(e.Buffer, 0, e.BytesRecorded);
+            _prebuffer?.TrimExcessBuffer();
         }
     }
 
