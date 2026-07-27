@@ -7,10 +7,10 @@
         mc:Ignorable="d"
         Title="音频转发器"
         Icon="/Assets/voice.ico"
-        Width="900"
-        Height="710"
-        MinWidth="820"
-        MinHeight="680"
+        Width="1100"
+        Height="760"
+        MinWidth="960"
+        MinHeight="620"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing"
         Background="#F4F6FA"
@@ -132,10 +132,12 @@
             </Grid>
         </Border>
 
-        <hc:Card Grid.Row="1"
-                 Margin="28,-18,28,26"
-                 Padding="0"
-                 VerticalAlignment="Top">
+        <ScrollViewer Grid.Row="1"
+                      Margin="0,-18,0,0"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+        <hc:Card Margin="28,0,28,26"
+                 Padding="0">
             <Grid Margin="28,24,28,26">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -227,7 +229,7 @@
                         <hc:ComboBox Height="42"
                                      Padding="12,0"
                                      DisplayMemberPath="Name"
-                                     IsHitTestVisible="{Binding IsConfigurationEnabled}"
+                                      IsEnabled="{Binding IsConfigurationEnabled}"
                                      ItemsSource="{Binding Devices}"
                                      SelectedItem="{Binding SelectedListeningDevice}"/>
                     </StackPanel>
@@ -255,7 +257,7 @@
                         <hc:ComboBox Height="42"
                                      Padding="12,0"
                                      DisplayMemberPath="Name"
-                                     IsHitTestVisible="{Binding IsConfigurationEnabled}"
+                                      IsEnabled="{Binding IsConfigurationEnabled}"
                                      ItemsSource="{Binding Devices}"
                                      SelectedItem="{Binding SelectedOutputDevice}"/>
                     </StackPanel>
@@ -288,7 +290,7 @@
                     <hc:ComboBox Grid.Column="2"
                                  Height="42"
                                  Padding="12,0"
-                                 IsHitTestVisible="{Binding IsConfigurationEnabled}"
+                                  IsEnabled="{Binding IsConfigurationEnabled}"
                                  ItemsSource="{Binding LatencyOptions}"
                                  SelectedItem="{Binding SelectedLatency}">
                         <hc:ComboBox.ItemTemplate>
@@ -305,7 +307,7 @@
                                FontWeight="SemiBold"
                                Foreground="#475569"
                                Text="实时性能"/>
-                    <UniformGrid Columns="6">
+                    <UniformGrid Columns="5">
                         <Border Margin="0,0,6,0"
                                 Padding="9,8"
                                 Background="#F8FAFC"
@@ -313,7 +315,7 @@
                             <StackPanel>
                                 <TextBlock FontSize="11"
                                            Foreground="#94A3B8"
-                                           Text="目标延迟"/>
+                                            Text="配置档位"/>
                                 <TextBlock Margin="0,4,0,0"
                                            FontSize="13"
                                            FontWeight="SemiBold"
@@ -328,7 +330,7 @@
                             <StackPanel>
                                 <TextBlock FontSize="11"
                                            Foreground="#94A3B8"
-                                           Text="估算延迟"/>
+                                             Text="软件路径估算（约）"/>
                                 <TextBlock Margin="0,4,0,0"
                                            FontSize="13"
                                            FontWeight="SemiBold"
@@ -337,8 +339,8 @@
                             </StackPanel>
                         </Border>
                         <Border Margin="0,0,6,0"
-                                Padding="9,8"
-                                Background="#F8FAFC"
+                                 Padding="9,8"
+                                 Background="#F8FAFC"
                                 CornerRadius="6">
                             <StackPanel>
                                 <TextBlock FontSize="11"
@@ -348,12 +350,29 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            Foreground="#0F172A"
-                                           Text="{Binding BufferStatusText}"/>
+                                            Text="{Binding BufferStatusText}"/>
                             </StackPanel>
                         </Border>
                         <Border Margin="0,0,6,0"
                                 Padding="9,8"
                                 Background="#F8FAFC"
+                                CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock FontSize="11"
+                                           Foreground="#94A3B8"
+                                            Text="活动管线 / 请求周期"/>
+                                <TextBlock Margin="0,4,0,0"
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="#0F172A"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip="{Binding PipelineStatusText}"
+                                            Text="{Binding PipelineStatusText}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Margin="0,0,6,0"
+                                 Padding="9,8"
+                                 Background="#F8FAFC"
                                 CornerRadius="6">
                             <StackPanel>
                                 <TextBlock FontSize="11"
@@ -363,27 +382,81 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            Foreground="#0F172A"
-                                           Text="{Binding CaptureRateText}"/>
+                                            Text="{Binding CaptureRateText}"/>
                             </StackPanel>
                         </Border>
-                        <Border Margin="0,0,6,0"
+                        <Border Margin="0,6,6,0"
                                 Padding="9,8"
                                 Background="#F8FAFC"
                                 CornerRadius="6">
                             <StackPanel>
                                 <TextBlock FontSize="11"
                                            Foreground="#94A3B8"
-                                           Text="回调频率"/>
+                                           Text="有效输出 / 累计补零"/>
                                 <TextBlock Margin="0,4,0,0"
-                                           FontSize="13"
-                                           FontWeight="SemiBold"
-                                           Foreground="#0F172A"
-                                           Text="{Binding CallbackRateText}"/>
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="#0F172A"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip="{Binding OutputRateText}"
+                                            Text="{Binding OutputRateText}"/>
                             </StackPanel>
                         </Border>
-                        <Border Padding="9,8"
+                        <Border Margin="0,6,6,0"
+                                 Padding="9,8"
+                                 Background="#F8FAFC"
+                                CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock FontSize="11"
+                                           Foreground="#94A3B8"
+                                             Text="捕获回调 / 最大间隔"/>
+                                <TextBlock Margin="0,4,0,0"
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="#0F172A"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip="{Binding CallbackRateText}"
+                                             Text="{Binding CallbackRateText}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Margin="0,6,6,0"
+                                Padding="9,8"
                                 Background="#F8FAFC"
                                 CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock FontSize="11"
+                                           Foreground="#94A3B8"
+                                           Text="欠载 / 重缓冲"/>
+                                <TextBlock Margin="0,4,0,0"
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="#0F172A"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip="{Binding RecoveryStatsText}"
+                                            Text="{Binding RecoveryStatsText}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Margin="0,6,6,0"
+                                Padding="9,8"
+                                Background="#F8FAFC"
+                                CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock FontSize="11"
+                                           Foreground="#94A3B8"
+                                           Text="时钟校正 / 丢弃"/>
+                                <TextBlock Margin="0,4,0,0"
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="#0F172A"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip="{Binding DriftStatusText}"
+                                            Text="{Binding DriftStatusText}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Margin="0,6,0,0"
+                                Padding="9,8"
+                                 Background="#F8FAFC"
+                                 CornerRadius="6">
                             <StackPanel>
                                 <TextBlock FontSize="11"
                                            Foreground="#94A3B8"
@@ -415,5 +488,6 @@
                 </Grid>
             </Grid>
         </hc:Card>
+        </ScrollViewer>
     </Grid>
 </Window>

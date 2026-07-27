@@ -18,11 +18,13 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private long _lastDiagnosticsTimestamp;
     private long _lastCaptureCallbackCount;
     private long _lastCapturedBytes;
+    private long _lastOutputSourceBytes;
     private string? _recoverySourceDeviceId;
     private string? _recoveryOutputDeviceId;
     private int _recoveryLatencyMilliseconds;
     private string? _configuredSourceDeviceId;
     private string? _configuredOutputDeviceId;
+    private int _disposed;
 
     [ObservableProperty]
     private ObservableCollection<AudioDeviceInfo> _devices = [];
@@ -52,6 +54,18 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _callbackRateText = "--";
+
+    [ObservableProperty]
+    private string _outputRateText = "--";
+
+    [ObservableProperty]
+    private string _pipelineStatusText = "--";
+
+    [ObservableProperty]
+    private string _recoveryStatsText = "--";
+
+    [ObservableProperty]
+    private string _driftStatusText = "--";
 
     [ObservableProperty]
     private string _forwardingDurationText = "00:00:00";
@@ -169,6 +183,12 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 SelectedListeningDevice.Id,
                 SelectedOutputDevice.Id,
                 SelectedLatency);
+            if (!_audioForwarder.IsRunning)
+            {
+                throw new InvalidOperationException(
+                    "音频组件未进入运行状态。");
+            }
+
             _recoverySourceDeviceId = SelectedListeningDevice.Id;
             _recoveryOutputDeviceId = SelectedOutputDevice.Id;
             _recoveryLatencyMilliseconds = SelectedLatency;
@@ -213,6 +233,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
         _diagnosticsTimer.Stop();
         _diagnosticsTimer.Tick -= DiagnosticsTimer_Tick;
         _recoveryTimer.Stop();
@@ -228,6 +253,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _lastDiagnosticsTimestamp = now;
         _lastCaptureCallbackCount = 0;
         _lastCapturedBytes = 0;
+        _lastOutputSourceBytes = 0;
         UpdateDiagnostics(now);
         _diagnosticsTimer.Start();
     }
@@ -245,13 +271,24 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             (double)Stopwatch.Frequency;
 
         EstimatedLatencyText =
-            $"{diagnostics.EstimatedLatency.TotalMilliseconds:F0} ms · " +
-            $"{(diagnostics.IsExclusiveOutput ? "独占" : "共享")}";
+            $"{diagnostics.EstimatedLatency.TotalMilliseconds:F0} ms";
         TargetLatencyText =
-            $"{diagnostics.TargetLatency.TotalMilliseconds:F0} ms";
+            $"{diagnostics.TargetLatency.TotalMilliseconds:F0} ms 档";
         BufferStatusText =
             $"{diagnostics.BufferedDuration.TotalMilliseconds:F0} / " +
-            $"{diagnostics.PeakBufferedDuration.TotalMilliseconds:F0} ms";
+            $"{diagnostics.PeakBufferedDuration.TotalMilliseconds:F0} ms" +
+            (diagnostics.IsBuffering ? " · 缓冲中" : string.Empty);
+        PipelineStatusText =
+            $"{GetPipelineModeText(diagnostics.PipelineMode)} · " +
+            $"请求 C{diagnostics.CaptureBuffer.TotalMilliseconds:F0} / " +
+            $"O{diagnostics.OutputLatency.TotalMilliseconds:F0} ms";
+        RecoveryStatsText =
+            $"欠载 {diagnostics.UnderrunCount} · " +
+            $"重缓冲 {diagnostics.RebufferCount}";
+        DriftStatusText =
+            $"{diagnostics.ResamplingCorrectionPpm:+0;-0;0} ppm" +
+            (diagnostics.IsRateRecoveryMode ? " · 追赶" : string.Empty) +
+            $" · 丢弃 {diagnostics.DroppedDuration.TotalMilliseconds:F0} ms";
 
         if (elapsedSeconds > 0)
         {
@@ -260,10 +297,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             var captureCallbacks =
                 diagnostics.CaptureCallbackCount -
                 _lastCaptureCallbackCount;
+            var outputSourceBytes =
+                diagnostics.OutputSourceBytes -
+                _lastOutputSourceBytes;
             CaptureRateText =
                 $"{capturedBytes / elapsedSeconds / 1024:F0} KB/s";
+            OutputRateText =
+                $"{outputSourceBytes / elapsedSeconds / 1024:F0} KB/s" +
+                $" · 补零 " +
+                $"{diagnostics.ZeroFilledDuration.TotalMilliseconds:F0} ms";
             CallbackRateText =
-                $"{captureCallbacks / elapsedSeconds:F1} 次/s";
+                $"{captureCallbacks / elapsedSeconds:F1} 次/s · " +
+                $"最大间隔 " +
+                $"{diagnostics.MaximumCaptureCallbackGap.TotalMilliseconds:F0} ms";
         }
 
         var runningDuration = TimeSpan.FromSeconds(
@@ -277,6 +323,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         _lastDiagnosticsTimestamp = now;
         _lastCapturedBytes = diagnostics.CapturedBytes;
         _lastCaptureCallbackCount = diagnostics.CaptureCallbackCount;
+        _lastOutputSourceBytes = diagnostics.OutputSourceBytes;
     }
 
     private void ResetDiagnosticsDisplay()
@@ -286,13 +333,28 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         BufferStatusText = "--";
         CaptureRateText = "--";
         CallbackRateText = "--";
+        OutputRateText = "--";
+        PipelineStatusText = "--";
+        RecoveryStatsText = "--";
+        DriftStatusText = "--";
         ForwardingDurationText = "00:00:00";
     }
 
     private void AudioForwarder_ForwardingFailed(object? sender, Exception exception)
     {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
+            if (Volatile.Read(ref _disposed) != 0 ||
+                _audioForwarder.IsRunning)
+            {
+                return;
+            }
+
             _diagnosticsTimer.Stop();
             IsForwarding = false;
             ResetDiagnosticsDisplay();
@@ -302,7 +364,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void BeginRecovery()
     {
-        if (_recoverySourceDeviceId == null ||
+        if (Volatile.Read(ref _disposed) != 0 ||
+            _recoverySourceDeviceId == null ||
             _recoveryOutputDeviceId == null)
         {
             return;
@@ -314,6 +377,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void RecoveryTimer_Tick(object? sender, EventArgs e)
     {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
         if (_recoverySourceDeviceId == null ||
             _recoveryOutputDeviceId == null)
         {
@@ -334,6 +402,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 _recoverySourceDeviceId,
                 _recoveryOutputDeviceId,
                 _recoveryLatencyMilliseconds);
+            if (!_audioForwarder.IsRunning)
+            {
+                return;
+            }
+
             _recoveryTimer.Stop();
             IsRecovering = false;
             IsForwarding = true;
@@ -356,6 +429,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     private AudioDeviceInfo? FindDevice(string? deviceId)
     {
         return Devices.FirstOrDefault(device => device.Id == deviceId);
+    }
+
+    private static string GetPipelineModeText(
+        AudioPipelineMode mode)
+    {
+        return mode switch
+        {
+            AudioPipelineMode.DirectWasapi =>
+                "Direct WASAPI",
+            AudioPipelineMode.MediaFoundationCompatibility =>
+                "MF 高延迟兼容",
+            _ => "未启动"
+        };
     }
 
     private static void ShowMessage(string message, MessageBoxImage image)
