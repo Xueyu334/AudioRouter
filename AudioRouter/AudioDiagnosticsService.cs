@@ -11,7 +11,8 @@ internal sealed class AudioDiagnosticsService
     public AudioForwarderDiagnostics GetSnapshot(
         bool isRunning,
         TimeSpan bufferedDuration,
-        int outputLatencyMilliseconds)
+        int outputLatencyMilliseconds,
+        bool isExclusiveOutput)
     {
         UpdatePeakBufferedDuration(bufferedDuration.Ticks);
         return new AudioForwarderDiagnostics(
@@ -22,7 +23,8 @@ internal sealed class AudioDiagnosticsService
             TimeSpan.FromTicks(
                 Interlocked.Read(ref _peakBufferedDurationTicks)),
             bufferedDuration +
-            TimeSpan.FromMilliseconds(outputLatencyMilliseconds));
+            TimeSpan.FromMilliseconds(outputLatencyMilliseconds),
+            isExclusiveOutput);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

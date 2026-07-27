@@ -1,9 +1,19 @@
+using System.Runtime.InteropServices;
+
 namespace AudioRouter;
 
 internal static class AudioThreadPriority
 {
+    private enum AvrtPriority
+    {
+        High = 1
+    }
+
     [ThreadStatic]
     private static bool _isPromoted;
+
+    [ThreadStatic]
+    private static nint _mmcssHandle;
 
     public static bool IsCurrentThreadPromoted => _isPromoted;
 
@@ -16,7 +26,20 @@ internal static class AudioThreadPriority
 
         try
         {
-            Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+            _mmcssHandle = AvSetMmThreadCharacteristics(
+                "Pro Audio",
+                out _);
+            if (_mmcssHandle != 0)
+            {
+                AvSetMmThreadPriority(
+                    _mmcssHandle,
+                    AvrtPriority.High);
+            }
+            else
+            {
+                Thread.CurrentThread.Priority =
+                    ThreadPriority.AboveNormal;
+            }
         }
         catch
         {
@@ -25,4 +48,18 @@ internal static class AudioThreadPriority
 
         _isPromoted = true;
     }
+
+    [DllImport(
+        "avrt.dll",
+        CharSet = CharSet.Unicode,
+        SetLastError = true)]
+    private static extern nint AvSetMmThreadCharacteristics(
+        string taskName,
+        out uint taskIndex);
+
+    [DllImport("avrt.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AvSetMmThreadPriority(
+        nint avrtHandle,
+        AvrtPriority priority);
 }

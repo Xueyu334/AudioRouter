@@ -242,7 +242,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             (double)Stopwatch.Frequency;
 
         EstimatedLatencyText =
-            $"{diagnostics.EstimatedLatency.TotalMilliseconds:F0} ms";
+            $"{diagnostics.EstimatedLatency.TotalMilliseconds:F0} ms · " +
+            $"{(diagnostics.IsExclusiveOutput ? "独占" : "共享")}";
         BufferStatusText =
             $"{diagnostics.BufferedDuration.TotalMilliseconds:F0} / " +
             $"{diagnostics.PeakBufferedDuration.TotalMilliseconds:F0} ms";

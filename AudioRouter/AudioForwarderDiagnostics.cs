@@ -6,4 +6,5 @@ public readonly record struct AudioForwarderDiagnostics(
     long CapturedBytes,
     TimeSpan BufferedDuration,
     TimeSpan PeakBufferedDuration,
-    TimeSpan EstimatedLatency);
+    TimeSpan EstimatedLatency,
+    bool IsExclusiveOutput);

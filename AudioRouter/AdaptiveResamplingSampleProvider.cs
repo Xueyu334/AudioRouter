@@ -11,6 +11,7 @@ public sealed class AdaptiveResamplingSampleProvider : ISampleProvider
     private const double RateSmoothingFactor = 0.25;
     private const double BufferSmoothingFactor = 0.02;
     private const double UpdateIntervalSeconds = 0.5;
+    private const double MinimumTargetBufferSeconds = 0.005;
 
     private readonly ISampleProvider _source;
     private readonly WdlResampler _resampler;
@@ -33,7 +34,7 @@ public sealed class AdaptiveResamplingSampleProvider : ISampleProvider
         _getBufferedDuration = getBufferedDuration;
         _targetBufferSeconds = Math.Max(
             targetBufferDuration.TotalSeconds,
-            0.02);
+            MinimumTargetBufferSeconds);
         _smoothedBufferSeconds = _targetBufferSeconds;
         _lastRateUpdateTimestamp = Stopwatch.GetTimestamp();
         _channels = source.WaveFormat.Channels;
