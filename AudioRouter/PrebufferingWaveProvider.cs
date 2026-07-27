@@ -9,6 +9,7 @@ public sealed class PrebufferingWaveProvider : IWaveProvider
     private readonly int _prebufferBytes;
     private readonly int _maximumBufferedBytes;
     private readonly int _headroomBytes;
+    private readonly int _trimHysteresisBytes;
     private volatile bool _isBuffering = true;
     private int _largestReadRequestBytes;
 
@@ -34,6 +35,8 @@ public sealed class PrebufferingWaveProvider : IWaveProvider
             source.WaveFormat.BlockAlign);
         _headroomBytes =
             source.WaveFormat.AverageBytesPerSecond * 20 / 1000;
+        _trimHysteresisBytes =
+            source.WaveFormat.AverageBytesPerSecond * 40 / 1000;
     }
 
     public WaveFormat WaveFormat => _source.WaveFormat;
@@ -57,13 +60,6 @@ public sealed class PrebufferingWaveProvider : IWaveProvider
             _isBuffering = false;
         }
 
-        if (_source.BufferedBytes < count)
-        {
-            _isBuffering = true;
-            Array.Clear(buffer, offset, count);
-            return count;
-        }
-
         return _source.Read(buffer, offset, count);
     }
 
@@ -78,7 +74,13 @@ public sealed class PrebufferingWaveProvider : IWaveProvider
         var trimLimitBytes = Math.Max(
             _maximumBufferedBytes,
             readRequestBytes + _headroomBytes);
-        var excessBytes = _source.BufferedBytes - trimLimitBytes;
+        var bufferedBytes = _source.BufferedBytes;
+        if (bufferedBytes <= trimLimitBytes + _trimHysteresisBytes)
+        {
+            return;
+        }
+
+        var excessBytes = bufferedBytes - trimLimitBytes;
         excessBytes -= excessBytes % WaveFormat.BlockAlign;
         if (excessBytes <= 0)
         {
