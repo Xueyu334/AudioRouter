@@ -47,10 +47,13 @@ public sealed class AudioForwarder : IDisposable
     private Exception? _startupFailure;
     private int _failureSignaled;
     private int _state = (int)ForwarderState.Stopped;
+
     private int _activeOutputLatencyMilliseconds =
         StableOutputLatencyMilliseconds;
+
     private int _activeCaptureBufferMilliseconds =
         CompatibilityCaptureBufferMilliseconds;
+
     private int _pipelineMode = (int)AudioPipelineMode.None;
     private OutputConfiguration[] _outputConfigurations = [];
     private int _activeOutputConfigurationIndex = -1;
@@ -678,7 +681,6 @@ public sealed class AudioForwarder : IDisposable
         try
         {
             _capture!.StartRecording();
-            return;
         }
         catch (Exception lowLatencyException)
         {
@@ -1002,9 +1004,9 @@ public sealed class AudioForwarder : IDisposable
     private void CheckOutputHealth(long sessionId)
     {
         if (Volatile.Read(ref _activeSessionId) !=
-                sessionId ||
+            sessionId ||
             (ForwarderState)Volatile.Read(ref _state) !=
-                ForwarderState.Running)
+            ForwarderState.Running)
         {
             return;
         }
@@ -1045,9 +1047,9 @@ public sealed class AudioForwarder : IDisposable
         lock (_syncRoot)
         {
             if (Volatile.Read(ref _activeSessionId) !=
-                    sessionId ||
+                sessionId ||
                 (ForwarderState)Volatile.Read(ref _state) !=
-                    ForwarderState.Running)
+                ForwarderState.Running)
             {
                 return;
             }
@@ -1084,16 +1086,16 @@ public sealed class AudioForwarder : IDisposable
 
         var nextStage =
             (AudioPipelineMode)Volatile.Read(
-                ref _pipelineMode) switch
-            {
-                AudioPipelineMode.DirectWasapi
-                    when Volatile.Read(
-                        ref _activeOutputLatencyMilliseconds) <= 10 =>
-                    OutputFallbackStage.Stable,
-                AudioPipelineMode.DirectWasapi =>
-                    OutputFallbackStage.MediaFoundation,
-                _ => OutputFallbackStage.LowLatency
-            };
+                    ref _pipelineMode) switch
+                {
+                    AudioPipelineMode.DirectWasapi
+                        when Volatile.Read(
+                            ref _activeOutputLatencyMilliseconds) <= 10 =>
+                        OutputFallbackStage.Stable,
+                    AudioPipelineMode.DirectWasapi =>
+                        OutputFallbackStage.MediaFoundation,
+                    _ => OutputFallbackStage.LowLatency
+                };
 
         if (nextStage == OutputFallbackStage.LowLatency)
         {
@@ -1125,13 +1127,13 @@ public sealed class AudioForwarder : IDisposable
 
         var hResult = exception.HResult;
         if (hResult ==
-                (int)AudioClientErrorCode.DeviceInvalidated ||
+            AudioClientErrorCode.DeviceInvalidated ||
             hResult ==
-                (int)AudioClientErrorCode.ResourcesInvalidated ||
+            AudioClientErrorCode.ResourcesInvalidated ||
             hResult ==
-                (int)AudioClientErrorCode.EndpointCreateFailed ||
+            AudioClientErrorCode.EndpointCreateFailed ||
             hResult ==
-                (int)AudioClientErrorCode.ServiceNotRunning)
+            AudioClientErrorCode.ServiceNotRunning)
         {
             return true;
         }
